@@ -70,13 +70,13 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
         minute: '2-digit'
     });
 
-    // ✅ Corregido: sin espacios en URLs
+    // ✅ URLs corregidas (sin espacios)
     const logoUrl = "https://i.ibb.co/4wdJxXBb/logo.jpg";
     const whatsappUrl = `https://wa.me/5491151267846?text=✅+Tu+turno+está+confirmado%0A%0ABarbero:+${peluquero}%0AServicio:+${servicio}%0AFecha:+${encodeURIComponent(fecha)}`;
 
     try {
         const data = await resend.emails.send({
-            from: `"✂️ Peluquería Blass" <${process.env.FROM_EMAIL || 'turnos@blassbarberia.com.ar'}>`,
+            from: `"✂️ Peluquería Blass" <${process.env.FROM_EMAIL || 'onboarding@resend.dev'}>`,
             to: cliente_email,
             subject: `✅ Turno confirmado - ${cliente_nombre}`,
             html: `
@@ -113,7 +113,6 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
             `
         });
         console.log('✅ Email enviado con Resend. ID:', data?.id || 'sin ID');
-console.log('📨 Detalles:', JSON.stringify(data, null, 2));
         return data;
     } catch (error) {
         console.error('❌ Error con Resend:', error);
@@ -172,7 +171,92 @@ app.post('/api/turnos', (req, res) => {
     );
 });
 
-// Ruta: recordatorios y listar turnos (sin cambios)
+// ✅ Generar .ics para Google Calendar
+app.get('/api/calendario/:id', (req, res) => {
+    const { id } = req.params;
+
+  db.get('SELECT * FROM turnos WHERE id = ?', [id], (err, turno) => {
+    if (err || !turno) {
+        return res.status(404).send('Turno no encontrado');
+    }
+
+    const inicio = new Date(turno.fecha_hora);
+    const fin = new Date(inicio.getTime() + (turno.duracion_min || 30) * 60000);
+
+    // Formato ISO sin : para ICS
+    const formatDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Peluquería Blass//Turno//ES
+BEGIN:VEVENT
+UID:${turno.id}@blass.com.ar
+DTSTAMP:${formatDate(new Date())}
+DTSTART:${formatDate(inicio)}
+DTEND:${formatDate(fin)}
+SUMMARY:Cita en Peluquería Blass
+DESCRIPTION:Barbero: ${turno.peluquero}\\nServicio: ${turno.servicio}\\n${turno.notas || ''}
+LOCATION:Av. San Martín 1709, Adrogué
+STATUS:CONFIRMED
+SEQUENCE:0
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Recordatorio de turno
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+
+    res.setHeader('Content-Type', 'text/calendar');
+    res.setHeader('Content-Disposition', `attachment; filename="turno-blass-${turno.id}.ics"`);
+    res.send(icsContent);
+    });
+});
+
+
+// ✅ Listar turnos con filtro
+app.get('/api/turnos', (req, res) => {
+    const { filtro } = req.query;
+    let sql = 'SELECT * FROM turnos';
+    let params = [];
+
+    if (filtro === 'hoy') {
+    sql += ' WHERE DATE(fecha_hora) = DATE("now")';
+    } else if (filtro === 'mañana') {
+    sql += ' WHERE DATE(fecha_hora) = DATE("now", "+1 day")';
+    }
+
+    sql += ' ORDER BY fecha_hora ASC';
+
+    db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+    });
+});
+
+// ✅ Actualizar estado de turno
+app.patch('/api/turnos/:id/estado', (req, res) => {
+    const { id } = req.params;
+    const { estado } = req.body;
+
+    if (!['pendiente', 'confirmado', 'finalizado', 'cancelado'].includes(estado)) {
+    return res.status(400).json({ error: 'Estado inválido' });
+    }
+
+    db.run(
+    `UPDATE turnos SET estado = ? WHERE id = ?`,
+    [estado, id],
+    function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) {
+        return res.status(404).json({ error: 'Turno no encontrado' });
+        }
+        res.json({ message: 'Estado actualizado' });
+    }
+    );
+});
+
+// Ruta: recordatorios
 app.post('/api/recordatorios', async (req, res) => {
     const manana = new Date();
     manana.setDate(manana.getDate() + 1);
@@ -183,10 +267,51 @@ app.post('/api/recordatorios', async (req, res) => {
     });
 });
 
+// Ruta: listar turnos
 app.get('/api/turnos', (req, res) => {
     db.all('SELECT * FROM turnos ORDER BY fecha_hora DESC', [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
+    });
+});
+
+// ✅ NUEVO: Obtener horarios por día
+app.get('/api/horarios/:fecha', (req, res) => {
+    const { fecha } = req.params;
+    db.all(`
+        SELECT strftime('%H:%M', fecha_hora) as hora, peluquero, servicio 
+        FROM turnos 
+        WHERE DATE(fecha_hora) = ? AND estado = 'pendiente'
+        ORDER BY fecha_hora
+    `, [fecha], (err, turnos) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        const horariosBase = ['10:00', '11:30', '13:00', '14:30', '16:00', '17:30'];
+        const horarios = horariosBase.map(hora => {
+            const turno = turnos.find(t => t.hora === hora);
+            return {
+                hora,
+                estado: turno ? 'ocupado' : 'libre',
+                peluquero: turno?.peluquero || null,
+                servicio: turno?.servicio || null
+            };
+        });
+        
+        res.json({ fecha, horarios });
+    });
+});
+
+// ✅ NUEVO: Horarios de un peluquero
+app.get('/api/peluquero/:nombre/:fecha', (req, res) => {
+    const { nombre, fecha } = req.params;
+    db.all(`
+        SELECT cliente_nombre, servicio, strftime('%H:%M', fecha_hora) as hora
+        FROM turnos 
+        WHERE peluquero = ? AND DATE(fecha_hora) = ? AND estado = 'pendiente'
+        ORDER BY fecha_hora
+    `, [nombre, fecha], (err, turnos) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ peluquero: nombre, fecha, turnos });
     });
 });
 

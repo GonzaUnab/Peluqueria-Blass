@@ -95,7 +95,6 @@ export default function TurnosPage() {
     return (
         <div className="min-h-screen bg-gray-50 p-4">
             <div className="max-w-md mx-auto">
-                {/* Botón para volver a la home */}
                 <div className="mb-6 text-center">
                     <Link 
                         href="/" 
@@ -105,7 +104,6 @@ export default function TurnosPage() {
                     </Link>
                 </div>
 
-                {/* Logo + título */}
                 <div className="text-center mb-6">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-black shadow-sm mx-auto mb-4">
                         <img 
@@ -188,7 +186,7 @@ export default function TurnosPage() {
                         min={new Date().toISOString().slice(0, 16)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
                     />
-                    
+
                     {/* Selector de horarios */}
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">Horarios disponibles hoy:</label>
