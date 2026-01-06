@@ -109,6 +109,15 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
                         💬 <a href="${whatsappUrl}" style="color: #111827; text-decoration: underline; font-weight: 600;">Confirmar por WhatsApp</a>
                     </p>
                 </div>
+
+                <div style="text-align: center; margin: 20px 0;">
+                  <a 
+                    href="https://peluqueria-blass.onrender.com/api/calendario/0"
+                    style="display: inline-block; background: #4285F4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                    📅 Agregar a Google Calendar
+                  </a>
+                  <p style="font-size: 12px; color: #6b7280; margin-top: 6px;">Hacé clic y el turno se agrega automáticamente</p>
+                </div>
             </div>
             `
         });
@@ -175,18 +184,18 @@ app.post('/api/turnos', (req, res) => {
 app.get('/api/calendario/:id', (req, res) => {
     const { id } = req.params;
 
-  db.get('SELECT * FROM turnos WHERE id = ?', [id], (err, turno) => {
-    if (err || !turno) {
-        return res.status(404).send('Turno no encontrado');
-    }
+    db.get('SELECT * FROM turnos WHERE id = ?', [id], (err, turno) => {
+        if (err || !turno) {
+            return res.status(404).send('Turno no encontrado');
+        }
 
-    const inicio = new Date(turno.fecha_hora);
-    const fin = new Date(inicio.getTime() + (turno.duracion_min || 30) * 60000);
+        const inicio = new Date(turno.fecha_hora);
+        const fin = new Date(inicio.getTime() + (turno.duracion_min || 30) * 60000);
 
-    // Formato ISO sin : para ICS
-    const formatDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        // Formato ISO sin : para ICS
+        const formatDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-    const icsContent = `BEGIN:VCALENDAR
+        const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Peluquería Blass//Turno//ES
 BEGIN:VEVENT
@@ -207,30 +216,29 @@ END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 
-    res.setHeader('Content-Type', 'text/calendar');
-    res.setHeader('Content-Disposition', `attachment; filename="turno-blass-${turno.id}.ics"`);
-    res.send(icsContent);
+        res.setHeader('Content-Type', 'text/calendar');
+        res.setHeader('Content-Disposition', `attachment; filename="turno-blass-${turno.id}.ics"`);
+        res.send(icsContent);
     });
 });
 
-
-// ✅ Listar turnos con filtro
+// ✅ Listar turnos con filtro (única ruta /api/turnos)
 app.get('/api/turnos', (req, res) => {
     const { filtro } = req.query;
     let sql = 'SELECT * FROM turnos';
     let params = [];
 
     if (filtro === 'hoy') {
-    sql += ' WHERE DATE(fecha_hora) = DATE("now")';
+        sql += ' WHERE DATE(fecha_hora) = DATE("now")';
     } else if (filtro === 'mañana') {
-    sql += ' WHERE DATE(fecha_hora) = DATE("now", "+1 day")';
+        sql += ' WHERE DATE(fecha_hora) = DATE("now", "+1 day")';
     }
 
     sql += ' ORDER BY fecha_hora ASC';
 
     db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
     });
 });
 
@@ -240,19 +248,19 @@ app.patch('/api/turnos/:id/estado', (req, res) => {
     const { estado } = req.body;
 
     if (!['pendiente', 'confirmado', 'finalizado', 'cancelado'].includes(estado)) {
-    return res.status(400).json({ error: 'Estado inválido' });
+        return res.status(400).json({ error: 'Estado inválido' });
     }
 
     db.run(
-    `UPDATE turnos SET estado = ? WHERE id = ?`,
-    [estado, id],
-    function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        if (this.changes === 0) {
-        return res.status(404).json({ error: 'Turno no encontrado' });
+        `UPDATE turnos SET estado = ? WHERE id = ?`,
+        [estado, id],
+        function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Turno no encontrado' });
+            }
+            res.json({ message: 'Estado actualizado' });
         }
-        res.json({ message: 'Estado actualizado' });
-    }
     );
 });
 
@@ -264,14 +272,6 @@ app.post('/api/recordatorios', async (req, res) => {
     db.all(`SELECT * FROM turnos WHERE DATE(fecha_hora) = ? AND estado = 'confirmado'`, [fecha], (err, turnos) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ enviados: turnos.length });
-    });
-});
-
-// Ruta: listar turnos
-app.get('/api/turnos', (req, res) => {
-    db.all('SELECT * FROM turnos ORDER BY fecha_hora DESC', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
     });
 });
 
@@ -315,7 +315,7 @@ app.get('/api/peluquero/:nombre/:fecha', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`🚀 Backend corriendo en http://localhost:${PORT}`);
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Backend corriendo en http://0.0.0.0:${PORT}`);
 });
