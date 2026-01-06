@@ -20,7 +20,7 @@ export default function HorariosPage() {
     useEffect(() => {
     const cargarHorarios = async () => {
         try {
-        const res = await fetch(`/api/horarios/${fecha}`);
+        const res = await fetch(`https://peluqueria-blass-1.onrender.com/api/horarios/${fecha}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setHorarios(data.horarios || []);

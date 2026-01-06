@@ -23,7 +23,7 @@ export default function TurnosPage() {
 
     // Cargar opciones al iniciar
     useEffect(() => {
-        fetch('http://localhost:3001/api/opciones')
+        fetch('https://peluqueria-blass-1.onrender.com/api/opciones')
             .then(res => res.json())
             .then(data => {
                 setOpciones(data);
@@ -55,7 +55,7 @@ export default function TurnosPage() {
         }
 
         try {
-            const res = await fetch('http://localhost:3001/api/turnos', {
+            const res = await fetch('https://peluqueria-blass-1.onrender.com/api/turnos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)

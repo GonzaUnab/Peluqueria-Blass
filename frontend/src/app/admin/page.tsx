@@ -39,7 +39,7 @@ export default function AdminPage() {
 
     const cambiarEstado = async (id: number, nuevoEstado: string) => {
     try {
-        await fetch(`/api/turnos/${id}/estado`, {
+        await fetch('https://peluqueria-blass-1.onrender.com/api/turnos', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado: nuevoEstado })
