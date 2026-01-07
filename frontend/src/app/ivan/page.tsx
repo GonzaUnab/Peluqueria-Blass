@@ -18,35 +18,35 @@ export default function IvanPage() {
     const [mensaje, setMensaje] = useState('');
 
     useEffect(() => {
-    const cargarTurnos = async () => {
-        setCargando(true);
-        try {
-        const hoy = new Date().toISOString().slice(0, 10);
-        const res = await fetch(`https://peluqueria-blass-1.onrender.com/api/peluquero/Ivan/${hoy}`);
-        const data = await res.json();
+        const cargarTurnos = async () => {
+            setCargando(true);
+            try {
+                const hoy = new Date().toISOString().slice(0, 10);
+                const res = await fetch(`https://peluqueria-blass-1.onrender.com/api/peluquero/Ivan/${hoy}`);
+                const data = await res.json();
         setTurnos(data.turnos || []);
-        } catch (err) {
+    } catch (err) {
         console.error('❌ Error al cargar turnos:', err);
         setMensaje('⚠️ No se pudieron cargar los turnos.');
-        } finally {
+    } finally {
         setCargando(false);
-        }
+    }
     };
     cargarTurnos();
-    }, []);
+}, []);
 
-    const cambiarEstado = async (id: number, estado: string) => {
+const cambiarEstado = async (id: number, estado: string) => {
     try {
         await fetch(`https://peluqueria-blass-1.onrender.com/api/turnos/${id}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado })
-        });
-        setTurnos(turnos.map(t => t.id === id ? { ...t, estado } : t));
+    });
+    setTurnos(turnos.map(t => t.id === id ? { ...t, estado } : t));
     } catch (err) {
-        alert('❌ Error al actualizar');
+    alert('❌ Error al actualizar');
     }
-    };
+};
 
   // Estadísticas
 const totalTurnos = turnos.length;
@@ -58,17 +58,48 @@ const tiempoProximo = proximo
     ? Math.round((new Date(proximo.fecha_hora).getTime() - Date.now()) / 60000) 
     : null;
 
+  // ✅ Exportar a Excel (CSV)
+const exportarExcel = () => {
+    if (turnos.length === 0) {
+        alert('⚠️ No hay turnos para exportar.');
+        return;
+    }
+
+    const hoy = new Date().toLocaleDateString('es-AR');
+    const csv = [
+        ['ID', 'Cliente', 'Servicio', 'Hora', 'Duración (min)', 'Estado'],
+        ...turnos.map(t => [
+        t.id,
+        t.cliente_nombre,
+        t.servicio,
+        new Date(t.fecha_hora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        t.duracion_min,
+        t.estado
+        ])
+    ]
+    .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `turnos-ivan-${hoy.replace(/\//g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
 return (
     <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-md mx-auto">
         {/* Botón para volver */}
-            <div className="mb-6 text-center">
-        <Link 
+        <div className="mb-6 text-center">
+            <Link 
             href="/" 
             className="inline-flex items-center text-gray-700 hover:text-gray-900 font-medium"
-        >
+            >
             ← Volver a la peluquería
-        </Link>
+            </Link>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6">
@@ -119,7 +150,6 @@ return (
                     hour: '2-digit',
                     minute: '2-digit'
                 });
-                const esHoy = new Date(t.fecha_hora).toDateString() === new Date().toDateString();
                 const esPasado = new Date(t.fecha_hora) < new Date();
 
                 return (
@@ -135,7 +165,7 @@ return (
                         : 'bg-white border-gray-200'
                     }`}
                     >
-                    <div className="flex justify-between items-start">
+                    < div className="flex justify-between items-start">
                         <div>
                         <div className="font-bold">{hora}</div>
                         <div className="font-medium">{t.cliente_nombre}</div>
@@ -176,16 +206,22 @@ return (
             )}
             </div>
 
-          {/* Botón para panel completo */}
-        <div className="mt-6 text-center">
-            <Link 
-            href="/admin"
-            className="inline-block bg-black text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
+          {/* Botones */}
+            <div className="mt-6 flex flex-col gap-3">
+            <button
+                onClick={exportarExcel}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition flex items-center justify-center gap-2"
             >
-            📊 Ver panel completo
+                📤 Exportar a Excel
+            </button>
+            <Link 
+                href="/admin"
+                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-lg text-center transition"
+            >
+                📊 Ver panel completo
             </Link>
             </div>
-            </div>
+        </div>
         </div>
     </div>
     );
