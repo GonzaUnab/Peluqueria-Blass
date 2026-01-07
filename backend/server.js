@@ -59,8 +59,8 @@ app.get('/api/opciones', (req, res) => {
     });
 });
 
-// ✅ Función con Resend (sin Nodemailer)
-async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero, servicio, fecha_hora) {
+// ✅ Función con Resend (sin espacios, sin errores)
+async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero, servicio, fecha_hora, turnoId = 0) {
     const fecha = new Date(fecha_hora).toLocaleString('es-AR', {
         weekday: 'long',
         day: 'numeric',
@@ -70,13 +70,14 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
         minute: '2-digit'
     });
 
-    // ✅ URLs corregidas (sin espacios)
+    // ✅ URLs limpias (sin espacios)
     const logoUrl = "https://i.ibb.co/4wdJxXBb/logo.jpg";
     const whatsappUrl = `https://wa.me/5491151267846?text=✅+Tu+turno+está+confirmado%0A%0ABarbero:+${peluquero}%0AServicio:+${servicio}%0AFecha:+${encodeURIComponent(fecha)}`;
+    const calendarioUrl = `https://peluqueria-blass-1.onrender.com/api/calendario/${turnoId}`;
 
     try {
         const data = await resend.emails.send({
-            from: `"✂️ Peluquería Blass" <${process.env.FROM_EMAIL || 'onboarding@resend.dev'}>`,
+            from: 'onboarding@resend.dev', // ✅ funciona para todos
             to: cliente_email,
             subject: `✅ Turno confirmado - ${cliente_nombre}`,
             html: `
@@ -111,12 +112,12 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
                 </div>
 
                 <div style="text-align: center; margin: 20px 0;">
-                  <a 
-                    href="https://peluqueria-blass.onrender.com/api/calendario/0"
-                    style="display: inline-block; background: #4285F4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                    📅 Agregar a Google Calendar
-                  </a>
-                  <p style="font-size: 12px; color: #6b7280; margin-top: 6px;">Hacé clic y el turno se agrega automáticamente</p>
+                    <a 
+                        href="${calendarioUrl}"
+                        style="display: inline-block; background: #4285F4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                        📅 Agregar a Google Calendar
+                    </a>
+                    <p style="font-size: 12px; color: #6b7280; margin-top: 6px;">Hacé clic y el turno se agrega automáticamente</p>
                 </div>
             </div>
             `
@@ -163,17 +164,24 @@ app.post('/api/turnos', (req, res) => {
 
             try {
                 if (cliente_email) {
-                    await enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero, servicio, fecha_hora);
+                    await enviarConfirmacionEmail(
+                        cliente_email,
+                        cliente_nombre,
+                        peluquero,
+                        servicio,
+                        fecha_hora,
+                        this.lastID
+                    );
                 }
                 res.status(201).json({
                     id: this.lastID,
-                    message: '✅ Turno reservado. ¡Te enviamos un email de confirmación!'
+                    message: '✅ Turno reservado. ¡Revisá tu bandeja de entrada (y spam) para confirmar!'
                 });
             } catch (emailErr) {
                 console.error('❌ Error al enviar email:', emailErr.message);
                 res.status(201).json({
                     id: this.lastID,
-                    message: '✅ Turno reservado, pero hubo un problema al enviar el email.'
+                    message: '✅ Turno reservado, pero no pudimos enviarte el email. ¡Te esperamos igual!'
                 });
             }
         }
@@ -192,7 +200,6 @@ app.get('/api/calendario/:id', (req, res) => {
         const inicio = new Date(turno.fecha_hora);
         const fin = new Date(inicio.getTime() + (turno.duracion_min || 30) * 60000);
 
-        // Formato ISO sin : para ICS
         const formatDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
         const icsContent = `BEGIN:VCALENDAR
@@ -216,13 +223,13 @@ END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 
-        res.setHeader('Content-Type', 'text/calendar');
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="turno-blass-${turno.id}.ics"`);
         res.send(icsContent);
     });
 });
 
-// ✅ Listar turnos con filtro (única ruta /api/turnos)
+// ✅ Listar turnos con filtro
 app.get('/api/turnos', (req, res) => {
     const { filtro } = req.query;
     let sql = 'SELECT * FROM turnos';
@@ -264,18 +271,7 @@ app.patch('/api/turnos/:id/estado', (req, res) => {
     );
 });
 
-// Ruta: recordatorios
-app.post('/api/recordatorios', async (req, res) => {
-    const manana = new Date();
-    manana.setDate(manana.getDate() + 1);
-    const fecha = manana.toISOString().slice(0, 10);
-    db.all(`SELECT * FROM turnos WHERE DATE(fecha_hora) = ? AND estado = 'confirmado'`, [fecha], (err, turnos) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ enviados: turnos.length });
-    });
-});
-
-// ✅ NUEVO: Obtener horarios por día
+// ✅ Obtener horarios por día
 app.get('/api/horarios/:fecha', (req, res) => {
     const { fecha } = req.params;
     db.all(`
@@ -301,17 +297,17 @@ app.get('/api/horarios/:fecha', (req, res) => {
     });
 });
 
-// ✅ NUEVO: Horarios de un peluquero
-app.get('/api/peluquero/:nombre/:fecha', (req, res) => {
-    const { nombre, fecha } = req.params;
+// ✅ Horarios de un peluquero (desde una fecha)
+app.get('/api/peluquero/:nombre/:fechaDesde', (req, res) => {
+    const { nombre, fechaDesde } = req.params;
     db.all(`
-        SELECT cliente_nombre, servicio, strftime('%H:%M', fecha_hora) as hora
+        SELECT cliente_nombre, servicio, strftime('%Y-%m-%d %H:%M', fecha_hora) as fecha_hora, duracion_min, estado
         FROM turnos 
-        WHERE peluquero = ? AND DATE(fecha_hora) = ? AND estado = 'pendiente'
-        ORDER BY fecha_hora
-    `, [nombre, fecha], (err, turnos) => {
+        WHERE peluquero = ? AND DATE(fecha_hora) >= ? AND estado IN ('pendiente', 'confirmado', 'finalizado')
+        ORDER BY fecha_hora DESC
+    `, [nombre, fechaDesde], (err, turnos) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ peluquero: nombre, fecha, turnos });
+        res.json({ peluquero: nombre, desde: fechaDesde, turnos });
     });
 });
 
