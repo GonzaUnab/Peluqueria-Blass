@@ -59,7 +59,7 @@ app.get('/api/opciones', (req, res) => {
     });
 });
 
-// ✅ Función con Resend (sin espacios, sin errores)
+// ✅ Función con Resend (email limpio + headers anti-spam)
 async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero, servicio, fecha_hora, turnoId = 0) {
     const fecha = new Date(fecha_hora).toLocaleString('es-AR', {
         weekday: 'long',
@@ -70,16 +70,21 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
         minute: '2-digit'
     });
 
-    // ✅ URLs limpias (sin espacios)
+    // ✅ URLs limpias
     const logoUrl = "https://i.ibb.co/4wdJxXBb/logo.jpg";
     const whatsappUrl = `https://wa.me/5491151267846?text=✅+Tu+turno+está+confirmado%0A%0ABarbero:+${peluquero}%0AServicio:+${servicio}%0AFecha:+${encodeURIComponent(fecha)}`;
     const calendarioUrl = `https://peluqueria-blass-1.onrender.com/api/calendario/${turnoId}`;
 
     try {
         const data = await resend.emails.send({
-            from: 'onboarding@resend.dev', // ✅ funciona para todos
+            from: 'onboarding@resend.dev',
             to: cliente_email,
+            reply_to: 'turnos@blassbarberia.com.ar', // ✅ mejora reputación
             subject: `✅ Turno confirmado - ${cliente_nombre}`,
+            headers: {
+                'X-Entity-Ref-ID': Date.now().toString(),
+                'List-Unsubscribe': '<mailto:support@blassbarberia.com.ar?subject=Unsubscribe>'
+            },
             html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #111827;">
                 <div style="text-align: center; margin-bottom: 24px;">
@@ -122,17 +127,20 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
             </div>
             `
         });
-        console.log('✅ Email enviado con Resend. ID:', data?.id || 'sin ID');
+        // ✅ Log con ID real y estado
+        console.log('✅ Email enviado. Resend ID:', data?.id, '| Status:', data?.status);
         return data;
     } catch (error) {
-        console.error('❌ Error con Resend:', error);
+        console.error('❌ Error con Resend:', error.message, '| Detalle:', error);
         throw error;
     }
 }
 
-// ✅ Ruta: crear turno (con Resend)
+// ✅ Ruta: crear turno (con sanitización de email)
 app.post('/api/turnos', (req, res) => {
     const { cliente_nombre, cliente_email, peluquero, servicio, fecha_hora } = req.body;
+    // ✅ Limpieza clave: trim + lowerCase
+    const emailLimpio = (cliente_email || '').trim().toLowerCase();
 
     if (!cliente_nombre || !peluquero || !servicio || !fecha_hora) {
         return res.status(400).json({ error: 'Faltan datos obligatorios' });
@@ -149,7 +157,7 @@ app.post('/api/turnos', (req, res) => {
 
     stmt.run(
         cliente_nombre,
-        cliente_email || null,
+        emailLimpio || null, // ✅ Usa el email limpio
         req.body.cliente_telefono || null,
         peluquero,
         servicio,
@@ -163,9 +171,9 @@ app.post('/api/turnos', (req, res) => {
             }
 
             try {
-                if (cliente_email) {
+                if (emailLimpio) {
                     await enviarConfirmacionEmail(
-                        cliente_email,
+                        emailLimpio, // ✅ Usa el limpio
                         cliente_nombre,
                         peluquero,
                         servicio,
