@@ -49,8 +49,8 @@ export default function TurnosPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.cliente_nombre || !formData.fecha_hora) {
-            setMensaje('⚠️ Completá nombre y fecha.');
+        if (!formData.cliente_nombre || !formData.cliente_email || !formData.fecha_hora) {
+            setMensaje('⚠️ Completá nombre, email y fecha.');
             return;
         }
 
@@ -141,7 +141,8 @@ export default function TurnosPage() {
                         type="email"
                         value={formData.cliente_email}
                         onChange={handleChange}
-                        placeholder="Email (opcional)"
+                        placeholder="Email *"
+                        required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
                     />
                     
