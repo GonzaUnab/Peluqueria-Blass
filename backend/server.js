@@ -59,7 +59,7 @@ app.get('/api/opciones', (req, res) => {
     });
 });
 
-// ✅ Función con Resend (email limpio + headers anti-spam)
+// ✅ Función con Resend (email limpio + headers anti-spam + texto alternativo)
 async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero, servicio, fecha_hora, turnoId = 0) {
     const fecha = new Date(fecha_hora).toLocaleString('es-AR', {
         weekday: 'long',
@@ -77,14 +77,13 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
 
     try {
         const data = await resend.emails.send({
-            from: 'onboarding@resend.dev',
+            from: 'Peluquería Blass <onboarding@resend.dev>', // ✅ Nombre + email
             to: cliente_email,
-            reply_to: 'turnos@blassbarberia.com.ar', // ✅ mejora reputación
-            subject: `✅ Turno confirmado - ${cliente_nombre}`,
-            headers: {
-                'X-Entity-Ref-ID': Date.now().toString(),
-                'List-Unsubscribe': '<mailto:support@blassbarberia.com.ar?subject=Unsubscribe>'
-            },
+            reply_to: 'turnos@blassbarberia.com.ar', // mejora reputación
+            subject: `✅ Hola ${cliente_nombre}, tu turno está confirmado`, // ✅ personalizado
+            // ✅ Versión texto simple (obligatorio para Gmail)
+            text: `¡Hola ${cliente_nombre}!\n\nTu turno con ${peluquero} para "${servicio}" el ${fecha} está confirmado.\n\n📍 Dirección: Av. San Martín 1709, Adrogué\n📞 Teléfono: (11) 5126-7846\n\n¡Te esperamos!`,
+            // ✅ HTML completo
             html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #111827;">
                 <div style="text-align: center; margin-bottom: 24px;">
@@ -122,16 +121,19 @@ async function enviarConfirmacionEmail(cliente_email, cliente_nombre, peluquero,
                         style="display: inline-block; background: #4285F4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
                         📅 Agregar a Google Calendar
                     </a>
-                    <p style="font-size: 12px; color: #6b7280; margin-top: 6px;">Hacé clic y el turno se agrega automáticamente</p>
                 </div>
             </div>
-            `
+            `,
+            // ✅ Headers anti-spam
+            headers: {
+                'X-Entity-Ref-ID': Date.now().toString(),
+                'List-Unsubscribe': '<mailto:support@blassbarberia.com.ar?subject=Unsubscribe>'
+            }
         });
-        // ✅ Log con ID real y estado
-        console.log('✅ Email enviado. Resend ID:', data?.id, '| Status:', data?.status);
+        console.log('✅ Email enviado. Resend ID:', data?.id);
         return data;
     } catch (error) {
-        console.error('❌ Error con Resend:', error.message, '| Detalle:', error);
+        console.error('❌ Error con Resend:', error.message);
         throw error;
     }
 }
@@ -319,6 +321,7 @@ app.get('/api/peluquero/:nombre/:fechaDesde', (req, res) => {
     });
 });
 
+// ✅ Puerto 10000 + host 0.0.0.0 (requerido por Render)
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Backend corriendo en http://0.0.0.0:${PORT}`);
