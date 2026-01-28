@@ -13,7 +13,6 @@ export default function HomePage() {
         <div className="font-['var(--font-playfair)'] text-2xl md:text-3xl text-yellow-500">BLASS BARBERÍA</div>
         <nav className="mt-4 md:mt-0">
           <ul className="flex flex-wrap justify-center gap-5 md:gap-8">
-            <li><Link href="/" className="font-bold hover:text-yellow-500 transition">Inicio</Link></li>
             <li><Link href="/turnos" className="font-bold hover:text-yellow-500 transition">Reservar</Link></li>
             <li><Link href="/horarios" className="font-bold hover:text-yellow-500 transition">Horarios</Link></li>
           </ul>
@@ -101,48 +100,82 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Horarios y contacto */}
-      <section className="py-16 px-6 bg-[#0a0a0a]">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="font-['var(--font-playfair)'] text-3xl text-yellow-500 text-center mb-8">🕒 Horarios</h2>
-          <div className="w-full bg-[#222] rounded-lg overflow-hidden border border-yellow-700">
-            <table className="w-full">
-              <tbody>
-                <tr className="border-b border-yellow-700/30">
-                  <td className="p-4 font-medium">Martes a Viernes</td>
-                  <td className="p-4 text-yellow-400">9:00 - 13:00 y 15:00 - 20:00</td>
-                </tr>
-                <tr className="border-b border-yellow-700/30">
-                  <td className="p-4 font-medium">Sábados</td>
-                  <td className="p-4 text-yellow-400">9:00 - 20:00</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">Domingos y Lunes</td>
-                  <td className="p-4 text-red-400">Cerrado</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div className="text-center mt-10">
-            <Link 
-              href="/turnos"
-              className="inline-block bg-yellow-700 text-black font-bold py-3 px-8 rounded-full hover:bg-yellow-600 transition font-['var(--font-geist-sans)']"
-            >
-              📅 Reservar turno ahora
-            </Link>
-            <p className="mt-4 font-['var(--font-geist-sans)']">
-              O contactanos por{' '}
-              <a 
-                href="https://wa.me/5491151267846?text=Hola,%20quiero%20reservar%20un%20turno" 
-                className="text-yellow-500 hover:underline"
-              >
-                WhatsApp
-              </a>
-            </p>
-          </div>
+      {/* Ubicación y horarios */}
+<section className="py-16 px-6 bg-[#0a0a0a]">
+  <div className="max-w-6xl mx-auto">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      
+      {/* Mapa */}
+      <div>
+        <h2 className="font-['var(--font-playfair)'] text-3xl text-yellow-500 mb-6">📍 Ubicación</h2>
+        <div className="rounded-xl overflow-hidden h-64 shadow-xl border border-gray-700">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3285.823435326449!2d-58.38355942430445!3d-34.79324407275486!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bccb5e5c1d1a0d%3A0x1e5e4d7a8e3d1b0a!2sAv.%20San%20Mart%C3%ADn%201709%2C%20Adrogu%C3%A9%2C%20Provincia%20de%20Buenos%20Aires!5e0!3m2!1ses-419!2sar!4v1713000000000!5m2!1ses-419!2sar"
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Ubicación de BLASS BARBERÍA"
+            className="w-full h-full filter grayscale"
+          ></iframe>
         </div>
-      </section>
+        <div className="space-y-3 mt-4 text-gray-300">
+          <p className="flex items-start">
+            <span className="text-xl mr-2">🏠</span>
+            <span>Av. San Martín 1709, Adrogué</span>
+          </p>
+          <p className="flex items-start">
+            <span className="text-xl mr-2">📞</span>
+            <span>(11) 5126-7846</span>
+          </p>
+        </div>
+      </div>
+      
+      {/* Horarios */}
+      <div>
+        <h2 className="font-['var(--font-playfair)'] text-3xl text-yellow-500 mb-6">🕒 Horarios</h2>
+        <div className="w-full bg-[#222] rounded-lg overflow-hidden border border-yellow-700">
+          <table className="w-full">
+            <tbody>
+              <tr className="border-b border-yellow-700/30">
+                <td className="p-4 font-medium">Martes a Viernes</td>
+                <td className="p-4 text-yellow-400">9:00 - 13:00 y 15:00 - 20:00</td>
+              </tr>
+              <tr className="border-b border-yellow-700/30">
+                <td className="p-4 font-medium">Sábados</td>
+                <td className="p-4 text-yellow-400">9:00 - 20:00</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-medium">Domingos y Lunes</td>
+                <td className="p-4 text-red-400">Cerrado</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="text-center mt-8">
+          <Link 
+            href="/turnos"
+            className="inline-block bg-yellow-700 text-black font-bold py-3 px-8 rounded-full hover:bg-yellow-600 transition font-['var(--font-geist-sans)']"
+          >
+            📅 Reservar turno ahora
+          </Link>
+          <p className="mt-4 font-['var(--font-geist-sans)']">
+            O contactanos por{' '}
+            <a 
+              href="https://wa.me/5491151267846" 
+              className="text-yellow-500 hover:underline"
+            >
+              WhatsApp
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* Modal de imagen ampliada */}
       {imagenAmpliada && (
